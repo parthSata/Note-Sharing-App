@@ -1,16 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../env';
 import { authGuard } from '../middleware/authGuard';
-import {
-  createNote,
-  getNoteById,
-  NoteServiceError,
-} from '../services/note-service';
-import {
-  createShareLink,
-  revokeShareLink,
-  ShareServiceError,
-} from '../services/share-service';
 import { apiError, ERROR_CODES } from '../utils/errors';
 
 type NotesRouteEnv = AppEnv & {
@@ -29,12 +19,29 @@ export const notesRoutes = new Hono<NotesRouteEnv>();
 
 notesRoutes.use('*', authGuard);
 
+notesRoutes.get('/', async (c) => {
+  try {
+    const { getUserNotes } = await import('../services/note-service');
+    const notes = await getUserNotes(c.env.DATABASE_URL, c.get('userId'));
+
+    return c.json({ success: true, notes });
+  } catch (error) {
+    return handleRouteError(c, error);
+  }
+});
+
 notesRoutes.post('/', async (c) => {
   try {
     const body = await readJsonBody(c);
     const title = readRequiredString(body, 'title');
     const content = readRequiredString(body, 'content');
-    const note = await createNote(c.get('userId'), title, content);
+    const { createNote } = await import('../services/note-service');
+    const note = await createNote(
+      c.env.DATABASE_URL,
+      c.get('userId'),
+      title,
+      content,
+    );
 
     return c.json({ success: true, note }, 201);
   } catch (error) {
@@ -44,7 +51,12 @@ notesRoutes.post('/', async (c) => {
 
 notesRoutes.get('/:id', async (c) => {
   try {
-    const note = await getNoteById(c.req.param('id'), c.get('userId'));
+    const { getNoteById } = await import('../services/note-service');
+    const note = await getNoteById(
+      c.env.DATABASE_URL,
+      c.req.param('id'),
+      c.get('userId'),
+    );
 
     return c.json({ success: true, note });
   } catch (error) {
@@ -62,13 +74,20 @@ notesRoutes.post('/:id/share', async (c) => {
       typeof body.password === 'string' && body.password.trim()
         ? body.password
         : undefined;
+    const { createShareLink } = await import('../services/share-service');
 
-    const share = await createShareLink(c.req.param('id'), c.get('userId'), {
-      shareType,
-      accessType,
-      expiresAt,
-      password,
-    });
+    const share = await createShareLink(
+      c.env.DATABASE_URL,
+      c.env.FRONTEND_URL ?? c.env.APP_URL,
+      c.req.param('id'),
+      c.get('userId'),
+      {
+        shareType,
+        accessType,
+        expiresAt,
+        password,
+      },
+    );
 
     return c.json(
       {
@@ -87,10 +106,15 @@ notesRoutes.post('/:id/revoke', async (c) => {
   try {
     const body = await readJsonBody(c);
     const shareId = readRequiredString(body, 'shareId');
+    const { revokeShareLink } = await import('../services/share-service');
 
-    await revokeShareLink(shareId, c.get('userId'));
+    const shareLink = await revokeShareLink(
+      c.env.DATABASE_URL,
+      shareId,
+      c.get('userId'),
+    );
 
-    return c.json({ success: true });
+    return c.json({ success: true, shareLink });
   } catch (error) {
     return handleRouteError(c, error);
   }
@@ -163,8 +187,7 @@ function handleRouteError(
 ) {
   if (
     error instanceof RouteValidationError ||
-    error instanceof NoteServiceError ||
-    error instanceof ShareServiceError
+    isRouteServiceError(error)
   ) {
     return apiError(c, error.status, error.code, error.message);
   }
@@ -174,5 +197,17 @@ function handleRouteError(
     500,
     ERROR_CODES.INTERNAL_ERROR,
     'Something went wrong.',
+  );
+}
+
+function isRouteServiceError(
+  error: unknown,
+): error is { status: number; code: string; message: string } {
+  return (
+    error instanceof Error &&
+    'status' in error &&
+    typeof error.status === 'number' &&
+    'code' in error &&
+    typeof error.code === 'string'
   );
 }

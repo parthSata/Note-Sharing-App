@@ -9,7 +9,7 @@ export function PageShell({ children, narrow = false }: { children: ReactNode; n
         <div className="animate-fade-in-up">{children}</div>
       </main>
       <footer className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
-        NoteVault demo — UI only, mock data.
+        NoteVault - secure note sharing with expiring links.
       </footer>
     </div>
   );

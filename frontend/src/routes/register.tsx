@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
-import { setUser } from "@/lib/mock-auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({ meta: [{ title: "Create account — NoteVault" }] }),
@@ -16,24 +16,46 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!email.includes("@")) return setError("Enter a valid email address.");
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     if (password !== confirm) return setError("Passwords don't match.");
     setLoading(true);
-    setTimeout(() => {
-      setUser({ email });
+
+    try {
+      await register(email, password);
       toast.success("Account created");
       navigate({ to: "/notes/new" });
-    }, 600);
+    } catch (err) {
+      const apiError = err as { code?: string; message?: string };
+      let message = apiError.message ?? "Unable to create account.";
+
+      if (
+        apiError.code === "EMAIL_ALREADY_EXISTS" ||
+        apiError.code === "USER_ALREADY_EXISTS" ||
+        apiError.message?.toLowerCase().includes("already registered")
+      ) {
+        message = "An account with this email already exists";
+      } else if (apiError.code === "VALIDATION_ERROR") {
+        message = apiError.message ?? "Please check your registration details.";
+      } else if (err instanceof TypeError) {
+        message = "Unable to connect to server";
+      }
+
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

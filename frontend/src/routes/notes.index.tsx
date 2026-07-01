@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Clock,
@@ -16,7 +17,9 @@ import { PageShell } from "@/components/PageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getUser } from "@/lib/mock-auth";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
+import { type Note, type ShareLink, useNotes } from "@/hooks/useNotes";
 
 export const Route = createFileRoute("/notes/")({
   head: () => ({ meta: [{ title: "My notes - NoteVault" }] }),
@@ -31,64 +34,70 @@ type NoteSummary = {
   accessType: "public" | "password";
   status: "active" | "expired" | "revoked" | "used";
   views: number;
-  expiresAt: Date;
+  expiresAt: Date | null;
   updatedAt: Date;
 };
 
-const mockNotes: NoteSummary[] = [
-  {
-    id: "q3-launch",
-    title: "Q3 launch credentials",
-    excerpt: "Staging API key, dashboard link, and rotation reminder.",
-    shareType: "one-time",
-    accessType: "password",
-    status: "active",
-    views: 7,
-    expiresAt: new Date(Date.now() + 22 * 3600 * 1000),
-    updatedAt: new Date(Date.now() - 2 * 3600 * 1000),
-  },
-  {
-    id: "client-onboarding",
-    title: "Client onboarding checklist",
-    excerpt: "Steps for account setup, DNS verification, and handoff notes.",
-    shareType: "time-based",
-    accessType: "public",
-    status: "active",
-    views: 18,
-    expiresAt: new Date(Date.now() + 3 * 24 * 3600 * 1000),
-    updatedAt: new Date(Date.now() - 9 * 3600 * 1000),
-  },
-  {
-    id: "incident-summary",
-    title: "Incident summary draft",
-    excerpt: "Timeline, affected systems, and follow-up owner list.",
-    shareType: "time-based",
-    accessType: "password",
-    status: "revoked",
-    views: 3,
-    expiresAt: new Date(Date.now() + 8 * 3600 * 1000),
-    updatedAt: new Date(Date.now() - 24 * 3600 * 1000),
-  },
-  {
-    id: "vendor-secret",
-    title: "Vendor access handoff",
-    excerpt: "Temporary instructions for the external QA vendor.",
-    shareType: "one-time",
-    accessType: "public",
-    status: "used",
-    views: 1,
-    expiresAt: new Date(Date.now() + 12 * 3600 * 1000),
-    updatedAt: new Date(Date.now() - 32 * 3600 * 1000),
-  },
-];
-
 function NotesPage() {
-  const user = getUser();
-  const activeNotes = mockNotes.filter((note) => note.status === "active").length;
-  const totalViews = mockNotes.reduce((sum, note) => sum + note.views, 0);
-  const protectedNotes = mockNotes.filter((note) => note.accessType === "password").length;
+  const auth = useAuth();
+  const notesApi = useNotes();
+  const authRef = useRef(auth);
+  const notesApiRef = useRef(notesApi);
+  const [user, setUser] = useState(() => auth.getUser());
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!user) {
+  authRef.current = auth;
+  notesApiRef.current = notesApi;
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadNotes() {
+      const currentUser = authRef.current.getUser();
+      setUser(currentUser);
+
+      if (!authRef.current.isLoggedIn() || !currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const userNotes = await notesApiRef.current.listNotes();
+
+        if (isActive) {
+          setNotes(userNotes);
+        }
+      } catch (err) {
+        if (isActive) {
+          setError(err instanceof Error ? err.message : "Unable to load notes");
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadNotes();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const noteSummaries = notes.map(toNoteSummary);
+  const activeNotes = noteSummaries.filter((note) => note.status === "active").length;
+  const totalViews = notes.reduce(
+    (sum, note) => sum + (note.shareLinks ?? []).reduce((linkSum, link) => linkSum + link.viewCount, 0),
+    0,
+  );
+  const protectedNotes = notes.filter((note) => (note.shareLinks ?? []).some((link) => link.accessType === "PASSWORD")).length;
+
+  if (!user && !loading) {
     return (
       <PageShell narrow>
         <Card className="p-8 text-center shadow-soft animate-scale-in">
@@ -139,8 +148,15 @@ function NotesPage() {
       </section>
 
       <section className="mt-6 space-y-3">
-        {mockNotes.length ? (
-          mockNotes.map((note, index) => <NoteRow key={note.id} note={note} index={index} />)
+        {loading ? (
+          <NotesSkeleton />
+        ) : error ? (
+          <Card className="p-8 text-center shadow-soft">
+            <h2 className="text-lg font-semibold tracking-tight">Unable to load notes</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          </Card>
+        ) : noteSummaries.length ? (
+          noteSummaries.map((note, index) => <NoteRow key={note.id} note={note} index={index} />)
         ) : (
           <Card className="p-8 text-center shadow-soft">
             <h2 className="text-lg font-semibold tracking-tight">No notes yet</h2>
@@ -155,6 +171,61 @@ function NotesPage() {
         )}
       </section>
     </PageShell>
+  );
+}
+
+function toNoteSummary(note: Note): NoteSummary {
+  const shareLinks = [...(note.shareLinks ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  const latestShareLink = shareLinks[0] ?? null;
+  const excerpt = note.content.length > 120 ? `${note.content.slice(0, 117)}...` : note.content;
+
+  return {
+    id: note.id,
+    title: note.title,
+    excerpt,
+    shareType: latestShareLink?.shareType === "ONE_TIME" ? "one-time" : "time-based",
+    accessType: latestShareLink?.accessType === "PASSWORD" ? "password" : "public",
+    status: latestShareLink ? getShareLinkStatus(latestShareLink) : "expired",
+    views: latestShareLink?.viewCount ?? 0,
+    expiresAt: latestShareLink ? new Date(latestShareLink.expiresAt) : null,
+    updatedAt: new Date(note.updatedAt),
+  };
+}
+
+function getShareLinkStatus(shareLink: ShareLink): NoteSummary["status"] {
+  if (shareLink.revokedAt) {
+    return "revoked";
+  }
+
+  if (shareLink.consumedAt) {
+    return "used";
+  }
+
+  if (new Date(shareLink.expiresAt) <= new Date()) {
+    return "expired";
+  }
+
+  return "active";
+}
+
+function NotesSkeleton() {
+  return (
+    <>
+      {[0, 1, 2].map((item) => (
+        <Card key={item} className="p-5 shadow-soft">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0 flex-1 space-y-3">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-full max-w-xl" />
+              <Skeleton className="h-4 w-72" />
+            </div>
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </Card>
+      ))}
+    </>
   );
 }
 
@@ -188,7 +259,7 @@ function NoteRow({ note, index }: { note: NoteSummary; index: number }) {
             <AccessTypeBadge accessType={note.accessType} />
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
-              Expires {note.expiresAt.toLocaleString()}
+              {note.expiresAt ? `Expires ${note.expiresAt.toLocaleString()}` : "No share link"}
             </span>
           </div>
         </div>
@@ -212,11 +283,7 @@ function NoteRow({ note, index }: { note: NoteSummary; index: number }) {
 
 function StatusBadge({ status }: { status: NoteSummary["status"] }) {
   if (status === "active") {
-    return (
-      <Badge className="bg-success/15 text-success hover:bg-success/20 border-success/20">
-        Active
-      </Badge>
-    );
+    return <Badge className="bg-success/15 text-success hover:bg-success/20 border-success/20">Active</Badge>;
   }
 
   if (status === "revoked") {

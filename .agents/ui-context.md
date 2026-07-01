@@ -12,7 +12,7 @@ Key files:
 - `frontend/src/routes/register.tsx`: centered auth card.
 - `frontend/src/routes/notes.new.tsx`: note creation form and post-create share output.
 - `frontend/src/routes/notes.$id.tsx`: note owner detail page with share metadata, view count, and revoke action.
-- `frontend/src/routes/share.$token.tsx`: public share page with loading, locked, unlocked, expired, revoked, used, and invalid demo states.
+- `frontend/src/routes/share.$token.tsx`: public share page with loading, locked, unlocked, expired, revoked, used, and invalid API-driven states.
 - `frontend/src/components/Navbar.tsx`: sticky top navigation with auth-aware actions.
 - `frontend/src/components/PageShell.tsx`: shared max-width layout and footer.
 - `frontend/src/styles.css`: Tailwind v4 theme tokens, custom utilities, and animations.
@@ -130,4 +130,3 @@ The UI should make these easy to demonstrate:
 - Time-based link fails after expiry.
 - Revoke button invalidates the link.
 - Note detail page shows view count.
-

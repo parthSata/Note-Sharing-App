@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Ban, CheckCircle2, Clock, FileLock2, Lock, Search, Unlock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -7,49 +7,108 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { useShare } from "@/hooks/useShare";
 
 type State =
   | "loading"
-  | "public-unlocked"
-  | "locked"
+  | "password-required"
   | "expired"
   | "revoked"
   | "used"
   | "invalid"
   | "unlocked";
 
+type SharedNote = {
+  title: string;
+  content: string;
+};
+
 export const Route = createFileRoute("/share/$token")({
-  head: () => ({ meta: [{ title: "Shared note — NoteVault" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
-    state: (s.state as State | undefined) ?? undefined,
-  }),
+  head: () => ({ meta: [{ title: "Shared note â€” NoteVault" }] }),
   component: SharePage,
 });
 
-const MOCK_PASSWORD = "OPEN";
-
 function SharePage() {
-  const { state: forcedState } = Route.useSearch();
+  const { token } = Route.useParams();
+  const { resolveToken, unlockWithPassword } = useShare();
+  const shareRef = useRef({ resolveToken, unlockWithPassword });
   const [state, setState] = useState<State>("loading");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [note, setNote] = useState<SharedNote | null>(null);
+  const [error, setError] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setState(forcedState ?? "locked");
-    }, 900);
-    return () => clearTimeout(t);
-  }, [forcedState]);
+  shareRef.current = { resolveToken, unlockWithPassword };
 
-  function unlock(e: React.FormEvent) {
+  useEffect(() => {
+    let cancelled = false;
+
+    setState("loading");
+    setPassword("");
+    setError("");
+    setNote(null);
+
+    shareRef.current
+      .resolveToken(token)
+      .then((response) => {
+        if (cancelled) return;
+
+        if ("state" in response) {
+          setState(response.state);
+          return;
+        }
+
+        if ("passwordRequired" in response && response.passwordRequired) {
+          setState("password-required");
+          return;
+        }
+
+        setNote(response.note);
+        setState("unlocked");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setState("invalid");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  async function unlock(e: React.FormEvent) {
     e.preventDefault();
-    if (password.trim().toUpperCase() === MOCK_PASSWORD) {
-      setError(false);
+    setUnlocking(true);
+    setError("");
+
+    try {
+      const response = await shareRef.current.unlockWithPassword(token, password);
+
+      if ("state" in response) {
+        if (response.state === "wrong-password") {
+          setError("Incorrect password");
+          setShakeKey((k) => k + 1);
+          return;
+        }
+
+        if (response.state === "too-many-attempts") {
+          setError("Too many attempts. Try again later.");
+          return;
+        }
+
+        setState(response.state);
+        return;
+      }
+
+      setNote(response.note);
+      setError("");
       setState("unlocked");
-    } else {
-      setError(true);
+    } catch {
+      setError("Unable to unlock this note.");
       setShakeKey((k) => k + 1);
+    } finally {
+      setUnlocking(false);
     }
   }
 
@@ -58,16 +117,15 @@ function SharePage() {
       <Navbar />
       <main className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl">
-          <DemoSwitcher current={state} setState={setState} />
           {state === "loading" && <LoadingView />}
-          {state === "public-unlocked" && <UnlockedView />}
-          {state === "unlocked" && <UnlockedView animateIn />}
-          {state === "locked" && (
+          {state === "unlocked" && note && <UnlockedView note={note} animateIn />}
+          {state === "password-required" && (
             <LockedView
               password={password}
               setPassword={setPassword}
               onSubmit={unlock}
               error={error}
+              unlocking={unlocking}
               shakeKey={shakeKey}
             />
           )}
@@ -109,37 +167,6 @@ function SharePage() {
   );
 }
 
-function DemoSwitcher({ current, setState }: { current: State; setState: (s: State) => void }) {
-  const opts: { label: string; value: State }[] = [
-    { label: "Loading", value: "loading" },
-    { label: "Public", value: "public-unlocked" },
-    { label: "Locked", value: "locked" },
-    { label: "Expired", value: "expired" },
-    { label: "Revoked", value: "revoked" },
-    { label: "Used", value: "used" },
-    { label: "Invalid", value: "invalid" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-border bg-card/60 p-3 text-xs">
-      <span className="font-medium text-muted-foreground">Preview state:</span>
-      {opts.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => setState(o.value)}
-          className={`rounded-full px-2.5 py-1 transition-colors ${
-            current === o.value || (current === "unlocked" && o.value === "locked")
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-      <span className="ml-auto text-muted-foreground">Try password: <code className="rounded bg-muted px-1">OPEN</code></span>
-    </div>
-  );
-}
-
 function LoadingView() {
   return (
     <Card className="p-6 shadow-soft animate-fade-in">
@@ -155,21 +182,18 @@ function LoadingView() {
   );
 }
 
-function UnlockedView({ animateIn = false }: { animateIn?: boolean }) {
+function UnlockedView({ note, animateIn = false }: { note: SharedNote; animateIn?: boolean }) {
   return (
     <Card className={`p-8 shadow-elegant ${animateIn ? "animate-scale-in" : "animate-fade-in-up"}`}>
       <div className="flex items-center gap-2">
         <Badge variant="secondary" className="gap-1"><Unlock className="h-3 w-3" /> Public</Badge>
         <Badge className="bg-success/15 text-success border-success/20 hover:bg-success/20">Active</Badge>
       </div>
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">Q3 launch credentials</h1>
+      <h1 className="mt-4 text-2xl font-semibold tracking-tight">{note.title}</h1>
       <p className="mt-1 text-xs text-muted-foreground">Shared via NoteVault</p>
       <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 p-5">
         <pre className="whitespace-pre-wrap font-sans text-[0.95rem] leading-relaxed text-foreground/90">
-{`Staging API key: sk_test_•••••••••
-Dashboard: https://example.com/admin
-
-Please rotate within 24h after first use.`}
+          {note.content}
         </pre>
       </div>
     </Card>
@@ -181,12 +205,14 @@ function LockedView({
   setPassword,
   onSubmit,
   error,
+  unlocking,
   shakeKey,
 }: {
   password: string;
   setPassword: (s: string) => void;
   onSubmit: (e: React.FormEvent) => void;
-  error: boolean;
+  error: string;
+  unlocking: boolean;
   shakeKey: number;
 }) {
   return (
@@ -209,10 +235,10 @@ function LockedView({
           className={`text-center font-mono tracking-widest ${error ? "border-destructive focus-visible:ring-destructive" : ""}`}
         />
         {error && (
-          <p className="text-center text-sm text-destructive animate-fade-in">Incorrect access key. Try again.</p>
+          <p className="text-center text-sm text-destructive animate-fade-in">{error}</p>
         )}
-        <Button type="submit" className="w-full gradient-primary text-primary-foreground shadow-elegant hover:opacity-95">
-          <Unlock className="h-4 w-4" /> Unlock
+        <Button type="submit" disabled={unlocking} className="w-full gradient-primary text-primary-foreground shadow-elegant hover:opacity-95">
+          <Unlock className="h-4 w-4" /> {unlocking ? "Unlocking..." : "Unlock"}
         </Button>
       </form>
     </Card>

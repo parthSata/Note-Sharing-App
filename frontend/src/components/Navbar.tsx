@@ -1,15 +1,18 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { FileLock2, ListChecks, LogOut, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getUser, setUser, type MockUser } from "@/lib/mock-auth";
+import { type AuthUser, useAuth } from "@/hooks/useAuth";
 
 export function Navbar() {
-  const [user, setLocal] = useState<MockUser>(null);
-  const navigate = useNavigate();
+  const { getUser, logout } = useAuth();
+  const authRef = useRef({ getUser });
+  const [user, setLocal] = useState<AuthUser | null>(null);
+
+  authRef.current = { getUser };
 
   useEffect(() => {
-    const sync = () => setLocal(getUser());
+    const sync = () => setLocal(authRef.current.getUser());
     sync();
     window.addEventListener("noteshare:auth", sync);
     window.addEventListener("storage", sync);
@@ -48,9 +51,8 @@ export function Navbar() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setUser(null);
-                  navigate({ to: "/login" });
+                onClick={async () => {
+                  await logout();
                 }}
               >
                 <LogOut className="h-4 w-4" />

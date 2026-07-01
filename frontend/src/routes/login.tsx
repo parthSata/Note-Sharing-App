@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
-import { setUser } from "@/lib/mock-auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — NoteVault" }] }),
@@ -16,22 +16,40 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!email.includes("@")) return setError("Enter a valid email address.");
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     setLoading(true);
-    setTimeout(() => {
-      setUser({ email });
+
+    try {
+      await login(email, password);
       toast.success("Welcome back!");
       navigate({ to: "/notes/new" });
-    }, 600);
+    } catch (err) {
+      const apiError = err as { code?: string; message?: string };
+      let message = apiError.message ?? "Unable to sign in.";
+
+      if (apiError.code === "UNAUTHORIZED") {
+        message = "Invalid email or password";
+      } else if (apiError.code === "VALIDATION_ERROR") {
+        message = apiError.message ?? "Please check your login details.";
+      } else if (err instanceof TypeError) {
+        message = "Unable to connect to server";
+      }
+
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

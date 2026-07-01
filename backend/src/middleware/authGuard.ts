@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from 'hono';
-import { verify } from 'jsonwebtoken';
+import { verify } from 'hono/jwt';
 import type { AppEnv } from '../env';
 import { apiError, ERROR_CODES } from '../utils/errors';
 
@@ -22,14 +22,14 @@ export const authGuard: MiddlewareHandler<AuthEnv> = async (c, next) => {
     return apiError(c, 401, ERROR_CODES.UNAUTHORIZED, 'Unauthorized.');
   }
 
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = c.env.JWT_SECRET;
 
   if (!jwtSecret) {
     return apiError(c, 401, ERROR_CODES.UNAUTHORIZED, 'Unauthorized.');
   }
 
   try {
-    const payload = verify(token, jwtSecret) as Partial<JwtPayload>;
+    const payload = (await verify(token, jwtSecret, 'HS256')) as Partial<JwtPayload>;
 
     if (!payload.userId || !payload.email) {
       return apiError(c, 401, ERROR_CODES.UNAUTHORIZED, 'Unauthorized.');

@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Check, Copy, KeyRound, Link2, Lock, QrCode, RefreshCcw, Sparkles, Timer, Unlock, Zap } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Check, Copy, KeyRound, Link2, Lock, QrCode, Sparkles, Timer, Unlock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { useNotes } from "@/hooks/useNotes";
 
 export const Route = createFileRoute("/notes/new")({
   head: () => ({ meta: [{ title: "Create a note — NoteVault" }] }),
@@ -17,17 +19,10 @@ export const Route = createFileRoute("/notes/new")({
 type ShareType = "one-time" | "time-based";
 type AccessType = "public" | "password";
 
-function genKey(len = 12) {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-function genToken() {
-  return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-}
-
 function NewNotePage() {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+  const { createNote, createShareLink } = useNotes();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [expiry, setExpiry] = useState(() => {
@@ -36,31 +31,53 @@ function NewNotePage() {
   });
   const [shareType, setShareType] = useState<ShareType>("time-based");
   const [accessType, setAccessType] = useState<AccessType>("public");
-  const [accessKey, setAccessKey] = useState(() => genKey());
   const [keyCopied, setKeyCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [submitted, setSubmitted] = useState<{ id: string; token: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState<{ id: string; shareUrl: string; rawAccessKey: string | null } | null>(null);
 
-  const shareLink = useMemo(() => {
-    if (!submitted) return "";
-    return `${typeof window !== "undefined" ? window.location.origin : ""}/share/${submitted.token}`;
-  }, [submitted]);
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      navigate({ to: "/login" });
+    }
+  }, [isLoggedIn, navigate]);
 
   function copy(text: string, set: (b: boolean) => void) {
     navigator.clipboard.writeText(text).then(() => {
       set(true);
       toast.success("Copied to clipboard");
-      setTimeout(() => set(false), 1800);
+      setTimeout(() => set(false), 2000);
     });
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       toast.error("Title and content are required");
       return;
     }
-    setSubmitted({ id: genToken(), token: genToken() });
+
+    setLoading(true);
+
+    try {
+      const note = await createNote(title.trim(), content.trim());
+      const share = await createShareLink(note.id, {
+        shareType: shareType === "one-time" ? "ONE_TIME" : "TIME_BASED",
+        accessType: accessType === "password" ? "PASSWORD" : "PUBLIC",
+        expiresAt: new Date(expiry).toISOString(),
+      });
+
+      setSubmitted({
+        id: note.id,
+        shareUrl: share.shareUrl,
+        rawAccessKey: share.rawAccessKey,
+      });
+      toast.success("Share link created");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to create note");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
@@ -81,11 +98,11 @@ function NewNotePage() {
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Share link</Label>
               <div className="mt-2 flex gap-2">
-                <Input readOnly value={shareLink} className="font-mono text-sm" />
+                <Input readOnly value={submitted.shareUrl} className="font-mono text-sm" />
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => copy(shareLink, setLinkCopied)}
+                  onClick={() => copy(submitted.shareUrl, setLinkCopied)}
                   className="shrink-0"
                 >
                   {linkCopied ? <Check className="h-4 w-4 text-success animate-scale-in" /> : <Copy className="h-4 w-4" />}
@@ -94,15 +111,15 @@ function NewNotePage() {
               </div>
             </div>
 
-            {accessType === "password" && (
+            {accessType === "password" && submitted.rawAccessKey && (
               <div className="rounded-xl border border-border bg-accent/40 p-4 animate-fade-in-up">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <KeyRound className="h-4 w-4 text-primary" />
                   Access key (share separately)
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <Input readOnly value={accessKey} className="font-mono text-sm tracking-widest" />
-                  <Button type="button" variant="outline" onClick={() => copy(accessKey, setKeyCopied)} className="shrink-0">
+                  <Input readOnly value={submitted.rawAccessKey} className="font-mono text-sm tracking-widest" />
+                  <Button type="button" variant="outline" onClick={() => copy(submitted.rawAccessKey ?? "", setKeyCopied)} className="shrink-0">
                     {keyCopied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -151,7 +168,7 @@ function NewNotePage() {
         <form onSubmit={submit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
-            <Input id="title" placeholder="e.g. Q3 launch credentials" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input id="title" placeholder="Enter a note title" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -219,34 +236,19 @@ function NewNotePage() {
                 <div className="mt-2 rounded-xl border border-border bg-accent/40 p-4">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <KeyRound className="h-4 w-4 text-primary" />
-                    Generated access key
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <Input readOnly value={accessKey} className="font-mono tracking-widest" />
-                    <Button type="button" variant="outline" size="icon" onClick={() => setAccessKey(genKey())} title="Regenerate">
-                      <RefreshCcw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => copy(accessKey, setKeyCopied)}
-                      title="Copy"
-                    >
-                      {keyCopied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
-                    </Button>
+                    Access key generated after creation
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Share this key separately from the link for best security.
+                    The backend will generate a secure key and show it once with the share link.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="w-full gradient-primary text-primary-foreground shadow-elegant hover:opacity-95">
+          <Button type="submit" size="lg" disabled={loading} className="w-full gradient-primary text-primary-foreground shadow-elegant hover:opacity-95">
             <Link2 className="h-4 w-4" />
-            Create & generate share link
+            {loading ? "Creating share link..." : "Create & generate share link"}
           </Button>
         </form>
       </Card>
