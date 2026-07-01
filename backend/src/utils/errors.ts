@@ -32,3 +32,12 @@ export function apiError(
     status as never,
   );
 }
+
+export function jsonError(
+  c: Context,
+  code: string,
+  message: string,
+  status = 400,
+) {
+  return apiError(c, status, code, message);
+}

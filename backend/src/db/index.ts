@@ -1,3 +1,4 @@
+import { PrismaNeon } from '@prisma/adapter-neon';
 import { PrismaClient } from '../generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -13,7 +14,9 @@ const globalForPrisma = globalThis as typeof globalThis & {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasourceUrl: databaseUrl,
+    adapter: new PrismaNeon({
+      connectionString: databaseUrl,
+    }),
   });
 
 if (process.env.NODE_ENV !== 'production') {

@@ -4,7 +4,11 @@ Keep this file honest. Mark only completed work as complete.
 
 ## Current Status
 
-Frontend UI is complete across all 5 required pages. Backend scaffold and Drizzle schema setup are now started. Backend implementation, real authentication, secure share-link logic, and README still need substantial work.
+Frontend UI is complete across all 5 required pages. Backend Prisma schema, Neon/PostgreSQL migration, core services, protected note routes, share-link business logic, and main Hono entrypoint are now in place. Auth and public share route files still need real handlers before the frontend can fully replace mock behavior.
+
+## Current Task
+
+Connect frontend to real backend APIs.
 
 ## Environment
 
@@ -33,6 +37,23 @@ Frontend UI is complete across all 5 required pages. Backend scaffold and Drizzl
 - [x] Root `AGENTS.md` and canonical `.agents/` files added.
 - [x] Tailwind IntelliSense canonical-class suggestions fixed for pasted UI diagnostics.
 - [x] Backend auth service added for register, login, JWT creation, and user lookup.
+- [x] Prisma 7 datasource config fixed and Prisma client generated.
+- [x] Prisma schema added for User, Note, ShareLink, ShareType, and AccessType.
+- [x] Initial database migration created and applied to PostgreSQL/Neon.
+- [x] Backend note service added for create, owner lookup, and user note listing.
+- [x] Backend share service added for secure token creation, public/password access, revoke, atomic one-time consumption, and view counts.
+- [x] Protected backend note routes added for create, owner fetch, share-link creation, and revoke.
+- [x] Backend Hono entrypoint configured with CORS, mounted routers, global error handling, and Node server startup.
+
+## Known Working Endpoints
+
+- `GET /health` returns backend health status.
+- `POST /notes` creates a note for the authenticated user.
+- `GET /notes/:id` returns an owned note with share links.
+- `POST /notes/:id/share` creates a secure share link and returns the raw access key when password-protected.
+- `POST /notes/:id/revoke` revokes a share link owned by the authenticated user.
+
+These protected endpoints require `Authorization: Bearer <token>`.
 
 ## Pending Frontend Work
 
@@ -46,21 +67,21 @@ Frontend UI is complete across all 5 required pages. Backend scaffold and Drizzl
 
 ## Pending Backend Work
 
-- [ ] Configure backend TypeScript/Hono project.
-- [ ] Configure PostgreSQL.
-- [ ] Choose and configure Prisma or Drizzle.
+- [x] Configure backend TypeScript/Hono project.
+- [x] Configure PostgreSQL.
+- [x] Choose and configure Prisma or Drizzle.
 - [ ] Add user model and auth routes.
-- [ ] Hash user passwords.
-- [ ] Add note model and note routes.
-- [ ] Add share-link model.
-- [ ] Generate cryptographically secure share tokens.
-- [ ] Hash share tokens before storing.
-- [ ] Generate and hash password-protected access keys.
-- [ ] Implement public share access.
-- [ ] Implement password-protected unlock.
-- [ ] Implement expired, revoked, invalid, and already-used responses.
-- [ ] Implement atomic one-time link consumption.
-- [ ] Implement safe view count increments.
+- [x] Hash user passwords.
+- [x] Add note model and note routes.
+- [x] Add share-link model.
+- [x] Generate cryptographically secure share tokens.
+- [x] Hash share tokens before storing.
+- [x] Generate and hash password-protected access keys.
+- [x] Implement public share access.
+- [x] Implement password-protected unlock.
+- [x] Implement expired, revoked, invalid, and already-used responses.
+- [x] Implement atomic one-time link consumption.
+- [x] Implement safe view count increments.
 - [ ] Implement brute-force protection/rate limiting.
 
 ## Pending README Work
