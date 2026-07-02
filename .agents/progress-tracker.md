@@ -54,6 +54,8 @@ Connect frontend to real backend APIs.
 - [x] Frontend Vercel build configured for Nitro's Vercel preset output.
 - [x] Backend root and favicon routes return safe API responses on Vercel.
 - [x] Backend CORS allowlist corrected for the Vercel frontend origin.
+- [x] Backend CORS origin matching now normalizes env-configured frontend URLs.
+- [x] Backend Vercel API entrypoint switched to Edge runtime to match the Hono Vercel adapter.
 
 ## Known Working Endpoints
 

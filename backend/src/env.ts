@@ -3,6 +3,7 @@ export interface AppBindings {
   JWT_SECRET?: string;
   FRONTEND_URL?: string;
   APP_URL?: string;
+  CORS_ORIGINS?: string;
   APP_ENV?: string;
 }
 
