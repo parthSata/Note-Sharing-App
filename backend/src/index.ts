@@ -10,35 +10,29 @@ import { apiError, ERROR_CODES } from './utils/errors';
 
 const app = new Hono<AppEnv>();
 
+const defaultAllowedOrigins = [
+  'http://localhost:8080',
+  'https://note-sharing-app-alpha.vercel.app',
+  'https://note-sharing-nc0b95k78-parthsatas-projects.vercel.app/'
+];
+
+app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: [
-      'http://localhost:5173',
-      'https://note-sharing-app-alpha.vercel.app',
-    ],
-    allowHeaders: [
-      'Content-Type',
-      'Authorization',
-    ],
-    allowMethods: [
-      'GET',
-      'POST',
-      'PATCH',
-      'PUT',
-      'DELETE',
-      'OPTIONS',
-    ],
+    origin: (origin, c) => {
+      const allowedOrigins = getAllowedOrigins(getAppEnv(c));
+      const normalizedOrigin = normalizeOrigin(origin);
+
+      return normalizedOrigin && allowedOrigins.has(normalizedOrigin)
+        ? origin
+        : null;
+    },
+    allowHeaders: ['Content-Type', 'Authorization', 'x-share-view-session'],
+    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
-    maxAge: 86400,
   }),
 );
-
-app.options('*', (c) => {
-  return c.body(null, 204);
-});
-
-app.use('*', logger());
 
 app.get('/', (c) => {
   return c.json({
@@ -81,3 +75,34 @@ app.notFound((c) => {
 });
 
 export default app;
+
+function getAllowedOrigins(env: AppEnv['Bindings']) {
+  return new Set(
+    [
+      ...defaultAllowedOrigins,
+      env.FRONTEND_URL,
+      env.APP_URL,
+      ...(env.CORS_ORIGINS?.split(',') ?? []),
+    ]
+      .map(normalizeOrigin)
+      .filter((origin): origin is string => Boolean(origin)),
+  );
+}
+
+function normalizeOrigin(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return undefined;
+  }
+
+  try {
+    return new URL(trimmedValue).origin;
+  } catch {
+    return trimmedValue.replace(/\/+$/, '');
+  }
+}
