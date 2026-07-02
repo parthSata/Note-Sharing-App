@@ -56,6 +56,10 @@ Connect frontend to real backend APIs.
 - [x] Backend CORS allowlist corrected for the Vercel frontend origin.
 - [x] Backend CORS origin matching now normalizes env-configured frontend URLs.
 - [x] Backend Vercel API entrypoint switched to Edge runtime to match the Hono Vercel adapter.
+- [x] Backend package scripts simplified for Vercel build/start expectations.
+- [x] Backend Vercel config includes Prisma files in the serverless bundle.
+- [x] Backend CORS middleware pinned to localhost/Vercel origins and registered before routes.
+- [x] Backend explicit OPTIONS preflight handler added after CORS middleware.
 
 ## Known Working Endpoints
 
