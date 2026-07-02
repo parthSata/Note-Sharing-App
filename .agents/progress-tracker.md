@@ -51,6 +51,9 @@ Connect frontend to real backend APIs.
 - [x] Time-based share view counts are deduplicated per browser session so refresh does not inflate views.
 - [x] Vercel backend API entrypoint configured for the generic Node.js runtime.
 - [x] Backend env access supports Vercel Node.js `process.env` as well as Worker bindings.
+- [x] Frontend Vercel build configured for Nitro's Vercel preset output.
+- [x] Backend root and favicon routes return safe API responses on Vercel.
+- [x] Backend CORS allowlist corrected for the Vercel frontend origin.
 
 ## Known Working Endpoints
 

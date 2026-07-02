@@ -16,13 +16,25 @@ app.use(
   cors({
     origin: [
       'http://localhost:8080',
-      'https://note-sharing-app-alpha.vercel.app/',
+      'https://note-sharing-app-alpha.vercel.app',
     ],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Share-View-Session'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   }),
 );
+
+app.get('/', (c) => {
+  return c.json({
+    ok: true,
+    name: 'Note Sharing API',
+    health: '/health',
+  });
+});
+
+app.get('/favicon.ico', (c) => {
+  return c.body(null, 204);
+});
 
 app.get('/health', (c) => {
   const env = getAppEnv(c);

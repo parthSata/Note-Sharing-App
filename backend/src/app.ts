@@ -11,6 +11,18 @@ export function createApp() {
 
   app.use('*', logger());
 
+  app.get('/', (c) => {
+    return c.json({
+      ok: true,
+      name: 'Note Sharing API',
+      health: '/health',
+    });
+  });
+
+  app.get('/favicon.ico', (c) => {
+    return c.body(null, 204);
+  });
+
   app.get('/health', (c) => {
     const env = getAppEnv(c);
 
