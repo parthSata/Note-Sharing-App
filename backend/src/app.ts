@@ -4,6 +4,7 @@ import type { AppEnv } from './env';
 import { authRoutes } from './routes/auth';
 import { notesRoutes } from './routes/notes';
 import { shareRoutes } from './routes/share';
+import { getAppEnv } from './utils/env';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -11,9 +12,11 @@ export function createApp() {
   app.use('*', logger());
 
   app.get('/health', (c) => {
+    const env = getAppEnv(c);
+
     return c.json({
       ok: true,
-      environment: c.env.APP_ENV ?? 'development',
+      environment: env.APP_ENV ?? 'development',
     });
   });
 

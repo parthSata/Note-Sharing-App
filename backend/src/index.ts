@@ -5,6 +5,7 @@ import type { AppEnv } from './env';
 import { authRoutes } from './routes/auth';
 import { notesRoutes } from './routes/notes';
 import { shareRoutes } from './routes/share';
+import { getAppEnv } from './utils/env';
 import { apiError, ERROR_CODES } from './utils/errors';
 
 const app = new Hono<AppEnv>();
@@ -13,26 +14,22 @@ app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: (origin, c) => {
-      if (
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:')
-      ) {
-        return origin;
-      }
-
-      return c.env.FRONTEND_URL ?? c.env.APP_URL ?? 'http://localhost:3000';
-    },
+    origin: [
+      'http://localhost:8080',
+      'https://note-sharing-app-alpha.vercel.app/',
+    ],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Share-View-Session'],
-    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   }),
 );
 
 app.get('/health', (c) => {
+  const env = getAppEnv(c);
+
   return c.json({
     ok: true,
-    environment: c.env.APP_ENV ?? 'development',
+    environment: env.APP_ENV ?? 'development',
   });
 });
 

@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import { verify } from 'hono/jwt';
 import type { AppEnv } from '../env';
+import { getAppEnv } from '../utils/env';
 import { apiError, ERROR_CODES } from '../utils/errors';
 
 type JwtPayload = {
@@ -13,6 +14,7 @@ type AuthEnv = AppEnv & {
 };
 
 export const authGuard: MiddlewareHandler<AuthEnv> = async (c, next) => {
+  const env = getAppEnv(c);
   const authorization = c.req.header('Authorization');
   const token = authorization?.startsWith('Bearer ')
     ? authorization.slice('Bearer '.length).trim()
@@ -22,7 +24,7 @@ export const authGuard: MiddlewareHandler<AuthEnv> = async (c, next) => {
     return apiError(c, 401, ERROR_CODES.UNAUTHORIZED, 'Unauthorized.');
   }
 
-  const jwtSecret = c.env.JWT_SECRET;
+  const jwtSecret = env.JWT_SECRET;
 
   if (!jwtSecret) {
     return apiError(c, 401, ERROR_CODES.UNAUTHORIZED, 'Unauthorized.');

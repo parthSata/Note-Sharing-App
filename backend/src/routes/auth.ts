@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { sign, verify } from 'hono/jwt';
 import { Hono } from 'hono';
 import type { AppEnv } from '../env';
+import { getAppEnv } from '../utils/env';
 import { apiError, ERROR_CODES } from '../utils/errors';
 
 type UserRow = {
@@ -28,8 +29,9 @@ export const authRoutes = new Hono<AppEnv>();
 
 authRoutes.post('/register', async (c) => {
   try {
+    const env = getAppEnv(c);
     const { email, password } = await readCredentials(c);
-    const db = getDatabase(c.env.DATABASE_URL);
+    const db = getDatabase(env.DATABASE_URL);
     const normalizedEmail = email.trim().toLowerCase();
     const existingUsers = (await db`
       SELECT id, email, "passwordHash", "createdAt", "updatedAt"
@@ -55,7 +57,7 @@ authRoutes.post('/register', async (c) => {
       RETURNING id, email, "passwordHash", "createdAt", "updatedAt"
     `) as UserRow[];
     const user = toPublicUser(createdUsers[0]);
-    const token = await createToken(c.env.JWT_SECRET, user);
+    const token = await createToken(env.JWT_SECRET, user);
 
     return c.json({ token, user }, 201);
   } catch (error) {
@@ -65,8 +67,9 @@ authRoutes.post('/register', async (c) => {
 
 authRoutes.post('/login', async (c) => {
   try {
+    const env = getAppEnv(c);
     const { email, password } = await readCredentials(c);
-    const db = getDatabase(c.env.DATABASE_URL);
+    const db = getDatabase(env.DATABASE_URL);
     const normalizedEmail = email.trim().toLowerCase();
     const users = (await db`
       SELECT id, email, "passwordHash", "createdAt", "updatedAt"
@@ -86,7 +89,7 @@ authRoutes.post('/login', async (c) => {
     }
 
     const publicUser = toPublicUser(user);
-    const token = await createToken(c.env.JWT_SECRET, publicUser);
+    const token = await createToken(env.JWT_SECRET, publicUser);
 
     return c.json({ token, user: publicUser });
   } catch (error) {
@@ -96,8 +99,9 @@ authRoutes.post('/login', async (c) => {
 
 authRoutes.get('/me', async (c) => {
   try {
-    const payload = await readAuthPayload(c.req.header('Authorization'), c.env.JWT_SECRET);
-    const db = getDatabase(c.env.DATABASE_URL);
+    const env = getAppEnv(c);
+    const payload = await readAuthPayload(c.req.header('Authorization'), env.JWT_SECRET);
+    const db = getDatabase(env.DATABASE_URL);
     const users = (await db`
       SELECT id, email, "passwordHash", "createdAt", "updatedAt"
       FROM "User"

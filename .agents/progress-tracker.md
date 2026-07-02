@@ -49,6 +49,8 @@ Connect frontend to real backend APIs.
 - [x] Frontend auth client defaults to the local Wrangler backend when `VITE_API_URL` is not set.
 - [x] Note and share services moved off Prisma/Node-only runtime paths for Wrangler local Worker compatibility.
 - [x] Time-based share view counts are deduplicated per browser session so refresh does not inflate views.
+- [x] Vercel backend API entrypoint configured for the generic Node.js runtime.
+- [x] Backend env access supports Vercel Node.js `process.env` as well as Worker bindings.
 
 ## Known Working Endpoints
 

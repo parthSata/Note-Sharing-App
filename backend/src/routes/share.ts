@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../env';
+import { getAppEnv } from '../utils/env';
 import { apiError, ERROR_CODES } from '../utils/errors';
 
 type JsonBody = Record<string, unknown>;
@@ -8,13 +9,14 @@ export const shareRoutes = new Hono<AppEnv>();
 
 shareRoutes.get('/:token', async (c) => {
   try {
+    const env = getAppEnv(c);
     const token = readRequiredParam(c.req.param('token'));
     const viewSessionId = readOptionalViewSessionId(
       c.req.header('X-Share-View-Session'),
     );
     const { resolveShareLink } = await import('../services/share-service');
     const result = await resolveShareLink(
-      c.env.DATABASE_URL,
+      env.DATABASE_URL,
       token,
       viewSessionId,
     );
@@ -27,6 +29,7 @@ shareRoutes.get('/:token', async (c) => {
 
 shareRoutes.post('/:token/unlock', async (c) => {
   try {
+    const env = getAppEnv(c);
     const token = readRequiredParam(c.req.param('token'));
     const viewSessionId = readOptionalViewSessionId(
       c.req.header('X-Share-View-Session'),
@@ -35,7 +38,7 @@ shareRoutes.post('/:token/unlock', async (c) => {
     const password = readRequiredString(body, 'password');
     const { unlockShareLink } = await import('../services/share-service');
     const result = await unlockShareLink(
-      c.env.DATABASE_URL,
+      env.DATABASE_URL,
       token,
       password,
       viewSessionId,

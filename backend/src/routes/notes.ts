@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../env';
 import { authGuard } from '../middleware/authGuard';
+import { getAppEnv } from '../utils/env';
 import { apiError, ERROR_CODES } from '../utils/errors';
 
 type NotesRouteEnv = AppEnv & {
@@ -21,8 +22,9 @@ notesRoutes.use('*', authGuard);
 
 notesRoutes.get('/', async (c) => {
   try {
+    const env = getAppEnv(c);
     const { getUserNotes } = await import('../services/note-service');
-    const notes = await getUserNotes(c.env.DATABASE_URL, c.get('userId'));
+    const notes = await getUserNotes(env.DATABASE_URL, c.get('userId'));
 
     return c.json({ success: true, notes });
   } catch (error) {
@@ -32,12 +34,13 @@ notesRoutes.get('/', async (c) => {
 
 notesRoutes.post('/', async (c) => {
   try {
+    const env = getAppEnv(c);
     const body = await readJsonBody(c);
     const title = readRequiredString(body, 'title');
     const content = readRequiredString(body, 'content');
     const { createNote } = await import('../services/note-service');
     const note = await createNote(
-      c.env.DATABASE_URL,
+      env.DATABASE_URL,
       c.get('userId'),
       title,
       content,
@@ -51,9 +54,10 @@ notesRoutes.post('/', async (c) => {
 
 notesRoutes.get('/:id', async (c) => {
   try {
+    const env = getAppEnv(c);
     const { getNoteById } = await import('../services/note-service');
     const note = await getNoteById(
-      c.env.DATABASE_URL,
+      env.DATABASE_URL,
       c.req.param('id'),
       c.get('userId'),
     );
@@ -66,6 +70,7 @@ notesRoutes.get('/:id', async (c) => {
 
 notesRoutes.post('/:id/share', async (c) => {
   try {
+    const env = getAppEnv(c);
     const body = await readJsonBody(c);
     const shareType = readEnumValue(body, 'shareType', SHARE_TYPES);
     const accessType = readEnumValue(body, 'accessType', ACCESS_TYPES);
@@ -77,8 +82,8 @@ notesRoutes.post('/:id/share', async (c) => {
     const { createShareLink } = await import('../services/share-service');
 
     const share = await createShareLink(
-      c.env.DATABASE_URL,
-      c.env.FRONTEND_URL ?? c.env.APP_URL,
+      env.DATABASE_URL,
+      env.FRONTEND_URL ?? env.APP_URL,
       c.req.param('id'),
       c.get('userId'),
       {
@@ -104,12 +109,13 @@ notesRoutes.post('/:id/share', async (c) => {
 
 notesRoutes.post('/:id/revoke', async (c) => {
   try {
+    const env = getAppEnv(c);
     const body = await readJsonBody(c);
     const shareId = readRequiredString(body, 'shareId');
     const { revokeShareLink } = await import('../services/share-service');
 
     const shareLink = await revokeShareLink(
-      c.env.DATABASE_URL,
+      env.DATABASE_URL,
       shareId,
       c.get('userId'),
     );
