@@ -11,7 +11,10 @@ import { apiError, ERROR_CODES } from './utils/errors';
 const app = new Hono<AppEnv>();
 
 const defaultAllowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
   'http://localhost:8080',
+  'http://127.0.0.1:8080',
   'https://note-sharing-app-alpha.vercel.app',
   'https://note-sharing-nc0b95k78-parthsatas-projects.vercel.app/'
 ];
@@ -21,10 +24,15 @@ app.use(
   '*',
   cors({
     origin: (origin, c) => {
-      const allowedOrigins = getAllowedOrigins(getAppEnv(c));
       const normalizedOrigin = normalizeOrigin(origin);
 
-      return normalizedOrigin && allowedOrigins.has(normalizedOrigin)
+      if (!normalizedOrigin) {
+        return null;
+      }
+
+      const allowedOrigins = getAllowedOrigins(getAppEnv(c));
+
+      return allowedOrigins.has(normalizedOrigin) || isLocalDevelopmentOrigin(normalizedOrigin)
         ? origin
         : null;
     },
@@ -33,6 +41,7 @@ app.use(
     credentials: true,
   }),
 );
+app.options('*', (c) => c.body(null, 204));
 
 app.get('/', (c) => {
   return c.json({
@@ -104,5 +113,15 @@ function normalizeOrigin(value: string | undefined) {
     return new URL(trimmedValue).origin;
   } catch {
     return trimmedValue.replace(/\/+$/, '');
+  }
+}
+
+function isLocalDevelopmentOrigin(origin: string) {
+  try {
+    const { hostname, protocol } = new URL(origin);
+
+    return protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1');
+  } catch {
+    return false;
   }
 }

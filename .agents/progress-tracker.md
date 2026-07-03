@@ -22,6 +22,7 @@ Connect frontend to real backend APIs.
 
 - [x] Assessment requirements captured in context files.
 - [x] Current frontend stack documented as TanStack Start/TanStack Router.
+- [x] Next.js `client/` scaffold created on explicit request as a separate sibling app.
 - [x] UI structure analyzed and documented.
 - [x] Required routes exist in the frontend.
 - [x] Frontend UI completed across all 5 required pages.
@@ -60,6 +61,13 @@ Connect frontend to real backend APIs.
 - [x] Backend Vercel config includes Prisma files in the serverless bundle.
 - [x] Backend CORS middleware pinned to localhost/Vercel origins and registered before routes.
 - [x] Backend explicit OPTIONS preflight handler added after CORS middleware.
+- [x] Next.js `client/` page/component imports reviewed and build-breaking issues fixed.
+- [x] Backend CORS allowlist updated for local Next.js client origins on port 3000.
+- [x] Backend CORS preflight handling verified for `http://localhost:3000`.
+- [x] Next.js `client/` Navbar hydration mismatch fixed by deferring localStorage user reads to client snapshots.
+- [x] Next.js `client/` note detail page shows the generated share/view URL after note creation.
+- [x] Next.js `client/` share URLs normalized to the current browser origin so local links use port 3000.
+- [x] Next.js `client/` deployment config added for hosting instead of the old `frontend/` project.
 
 ## Known Working Endpoints
 
