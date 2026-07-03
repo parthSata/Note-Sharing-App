@@ -16,7 +16,8 @@ const defaultAllowedOrigins = [
   'http://localhost:8080',
   'http://127.0.0.1:8080',
   'https://note-sharing-app-alpha.vercel.app',
-  'https://note-sharing-nc0b95k78-parthsatas-projects.vercel.app/'
+  'https://note-sharing-nc0b95k78-parthsatas-projects.vercel.app/',
+  'https://note-sharing-app-nyde.vercel.app/',
 ];
 
 app.use('*', logger());

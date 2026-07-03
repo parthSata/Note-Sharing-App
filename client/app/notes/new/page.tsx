@@ -83,7 +83,7 @@ export default function NewNotePage() {
                   <input readOnly value={shareUrl}
                     className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700" />
                   <button onClick={() => copy(shareUrl, "url")}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition flex items-center gap-2 text-sm font-medium min-w-[100px] justify-center">
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition flex items-center gap-2 text-sm font-medium min-w-25 justify-center">
                     {copiedUrl ? <><Check className="w-4 h-4" />Copied!</> : <><Copy className="w-4 h-4" />Copy</>}
                   </button>
                 </div>
@@ -96,7 +96,7 @@ export default function NewNotePage() {
                     <input readOnly value={accessKey}
                       className="flex-1 px-4 py-2.5 border border-indigo-200 rounded-xl text-sm bg-indigo-50 font-mono text-indigo-800 tracking-widest" />
                     <button onClick={() => copy(accessKey, "key")}
-                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition flex items-center gap-2 text-sm font-medium min-w-[100px] justify-center">
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition flex items-center gap-2 text-sm font-medium min-w-25 justify-center">
                       {copiedKey ? <><Check className="w-4 h-4" />Copied!</> : <><Copy className="w-4 h-4" />Copy</>}
                     </button>
                   </div>
