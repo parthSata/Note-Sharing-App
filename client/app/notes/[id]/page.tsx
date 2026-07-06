@@ -33,7 +33,17 @@ export default function NoteDetailPage() {
     getNote(params.id as string)
       .then((nextNote) => {
         setNote(nextNote);
-        setStoredShareUrl(sessionStorage.getItem(`note:${nextNote.id}:shareUrl`) || "");
+        const storageKey = `note:${nextNote.id}:shareUrl`;
+        const cachedShareUrl =
+          sessionStorage.getItem(storageKey) ||
+          localStorage.getItem(storageKey) ||
+          "";
+
+        if (cachedShareUrl) {
+          sessionStorage.setItem(storageKey, cachedShareUrl);
+        }
+
+        setStoredShareUrl(cachedShareUrl);
       })
       .catch(() => toast.error("Note not found"))
       .finally(() => setLoading(false));
@@ -134,9 +144,9 @@ export default function NoteDetailPage() {
               </div>
             </div>
 
-            {shareUrl && (
-              <div className="mb-4">
-                <label className="block text-xs text-slate-500 mb-1.5">Share URL</label>
+            <div className="mb-4">
+              <label className="block text-xs text-slate-500 mb-1.5">Share URL</label>
+              {shareUrl ? (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input readOnly value={shareUrl}
                     className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700" />
@@ -150,8 +160,12 @@ export default function NoteDetailPage() {
                     Open
                   </Link>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  This raw share URL is only available when the link is generated. Create a new share link if you need to copy it again.
+                </div>
+              )}
+            </div>
 
             {!link.revokedAt && (
               <button onClick={() => setShowConfirm(true)}

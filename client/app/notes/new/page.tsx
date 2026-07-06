@@ -53,6 +53,7 @@ export default function NewNotePage() {
       const clientShareUrl = normalizeShareUrlForClient(res.shareUrl);
       setShareUrl(clientShareUrl);
       sessionStorage.setItem(`note:${note.id}:shareUrl`, clientShareUrl);
+      localStorage.setItem(`note:${note.id}:shareUrl`, clientShareUrl);
       setAccessKey(res.rawAccessKey);
       setSuccess(true);
       toast.success("Note created and share link generated!");

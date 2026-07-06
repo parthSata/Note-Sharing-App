@@ -68,6 +68,7 @@ Connect frontend to real backend APIs.
 - [x] Next.js `client/` note detail page shows the generated share/view URL after note creation.
 - [x] Next.js `client/` share URLs normalized to the current browser origin so local links use port 3000.
 - [x] Next.js `client/` deployment config added for hosting instead of the old `frontend/` project.
+- [x] Next.js `client/` note detail page now keeps generated share URLs visible from browser cache and shows a clear secure fallback when an older raw URL is unavailable.
 
 ## Known Working Endpoints
 
