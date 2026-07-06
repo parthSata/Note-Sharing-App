@@ -1,5 +1,9 @@
 import { neon } from '@neondatabase/serverless';
 import { ERROR_CODES } from '../utils/errors';
+import {
+  serializeDatabaseUtcTimestamp,
+  serializeNullableDatabaseUtcTimestamp,
+} from '../utils/dates';
 
 type ShareLinkRow = {
   id: string;
@@ -52,7 +56,7 @@ export async function createNote(
     RETURNING id, "userId", title, content, "createdAt", "updatedAt"
   `) as NoteRow[];
 
-  return notes[0];
+  return serializeNote(notes[0]);
 }
 
 export async function getNoteById(
@@ -80,7 +84,7 @@ export async function getNoteById(
   const shareLinks = await getShareLinksForNotes(databaseUrl, [note.id]);
 
   return {
-    ...note,
+    ...serializeNote(note),
     shareLinks: shareLinks.get(note.id) ?? [],
   };
 }
@@ -102,7 +106,7 @@ export async function getUserNotes(
   );
 
   return notes.map<NoteWithShareLinks>((note) => ({
-    ...note,
+    ...serializeNote(note),
     shareLinks: shareLinks.get(note.id) ?? [],
   }));
 }
@@ -137,11 +141,30 @@ async function getShareLinksForNotes(
 
   for (const shareLink of shareLinks) {
     const existingLinks = linksByNoteId.get(shareLink.noteId) ?? [];
-    existingLinks.push(shareLink);
+    existingLinks.push(serializeShareLink(shareLink));
     linksByNoteId.set(shareLink.noteId, existingLinks);
   }
 
   return linksByNoteId;
+}
+
+function serializeNote(note: NoteRow): NoteRow {
+  return {
+    ...note,
+    createdAt: serializeDatabaseUtcTimestamp(note.createdAt),
+    updatedAt: serializeDatabaseUtcTimestamp(note.updatedAt),
+  };
+}
+
+function serializeShareLink(shareLink: ShareLinkRow): ShareLinkRow {
+  return {
+    ...shareLink,
+    expiresAt: serializeDatabaseUtcTimestamp(shareLink.expiresAt),
+    revokedAt: serializeNullableDatabaseUtcTimestamp(shareLink.revokedAt),
+    consumedAt: serializeNullableDatabaseUtcTimestamp(shareLink.consumedAt),
+    createdAt: serializeDatabaseUtcTimestamp(shareLink.createdAt),
+    updatedAt: serializeDatabaseUtcTimestamp(shareLink.updatedAt),
+  };
 }
 
 function getDatabase(databaseUrl?: string) {

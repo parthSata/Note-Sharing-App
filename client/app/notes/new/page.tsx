@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import { useNotes } from "@/hooks/useNotes";
 import { useAuth } from "@/hooks/useAuth";
+import { getLocalMinDateTime, localInputToUTC } from "@/lib/dateUtils";
 import { normalizeShareUrlForClient } from "@/lib/utils";
 
 export default function NewNotePage() {
@@ -26,6 +27,7 @@ export default function NewNotePage() {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [noteId, setNoteId] = useState("");
+  const minExpiryValue = getLocalMinDateTime();
 
   useEffect(() => {
     if (!isLoggedIn()) router.push("/login");
@@ -41,6 +43,8 @@ export default function NewNotePage() {
     e.preventDefault();
     if (!expiresAt) { toast.error("Please select an expiry date"); return; }
     if (new Date(expiresAt) <= new Date()) { toast.error("Expiry must be in the future"); return; }
+    const expiresAtUtc = localInputToUTC(expiresAt);
+
     setLoading(true);
     try {
       const note = await createNote(title, content);
@@ -48,7 +52,7 @@ export default function NewNotePage() {
       const res = await createShareLink(note.id, {
         shareType,
         accessType,
-        expiresAt: new Date(expiresAt).toISOString(),
+        expiresAt: expiresAtUtc,
       });
       const clientShareUrl = normalizeShareUrlForClient(res.shareUrl);
       setShareUrl(clientShareUrl);
@@ -144,8 +148,9 @@ export default function NewNotePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Expires At</label>
+              <p className="text-xs text-slate-500 mb-1.5">Shown in Indian Standard Time (IST).</p>
               <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
+                min={minExpiryValue}
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" required />
             </div>
           </div>

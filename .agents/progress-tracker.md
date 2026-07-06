@@ -4,7 +4,7 @@ Keep this file honest. Mark only completed work as complete.
 
 ## Current Status
 
-Frontend UI is complete across all 5 required pages and is wired to backend APIs for auth, notes, share-link creation, note management, and public share access. Backend schema, Neon/PostgreSQL migration, Worker-safe SQL services, protected note routes, public share routes, share-link business logic, main Hono entrypoint, and backend auth routes are now in place.
+Frontend UI is complete across all 5 required pages and is wired to backend APIs for auth, notes, share-link creation, note management, and public share access. Backend schema, Neon/PostgreSQL migration, Prisma-backed services, protected note routes, public share routes, share-link business logic, main Hono entrypoint, and backend auth routes are now in place.
 
 ## Current Task
 
@@ -13,7 +13,7 @@ Connect frontend to real backend APIs.
 ## Environment
 
 - Hono.js
-- Drizzle ORM
+- Prisma ORM
 - Neon PostgreSQL
 - Bun
 - Cloudflare Workers
@@ -26,7 +26,7 @@ Connect frontend to real backend APIs.
 - [x] UI structure analyzed and documented.
 - [x] Required routes exist in the frontend.
 - [x] Frontend UI completed across all 5 required pages.
-- [x] Backend scaffold initialized with Hono, Drizzle, Neon, and Cloudflare Workers config.
+- [x] Backend scaffold initialized with Hono, Prisma, Neon, and Cloudflare Workers config.
 - [x] Shared UI shell exists through `Navbar` and `PageShell`.
 - [x] shadcn-style UI primitives exist under `frontend/src/components/ui`.
 - [x] Backend-backed `/login` page exists.
@@ -69,6 +69,12 @@ Connect frontend to real backend APIs.
 - [x] Next.js `client/` share URLs normalized to the current browser origin so local links use port 3000.
 - [x] Next.js `client/` deployment config added for hosting instead of the old `frontend/` project.
 - [x] Next.js `client/` note detail page now keeps generated share URLs visible from browser cache and shows a clear secure fallback when an older raw URL is unavailable.
+- [x] Next.js `client/` expiry timestamps now parse backend timezone-less UTC values correctly before displaying them in IST.
+- [x] Backend note/share API responses now serialize database UTC timestamps as explicit ISO strings with timezone markers.
+- [x] Next.js `client/` note pages now use a shared local timezone date formatter and local datetime input minimum.
+- [x] Next.js `client/` note pages now convert datetime-local input with `localInputToUTC` and display note dates through the local timezone formatter.
+- [x] Temporary timezone debug console logs added to note creation, notes list, and note detail pages, then removed after the timezone fix was verified.
+- [x] Backend UTC timestamp serializer now treats PostgreSQL `TIMESTAMP` Date objects as UTC wall-clock values to avoid IST double-offset display bugs.
 
 ## Known Working Endpoints
 
@@ -102,7 +108,7 @@ These protected endpoints require `Authorization: Bearer <token>`.
 
 - [x] Configure backend TypeScript/Hono project.
 - [x] Configure PostgreSQL.
-- [x] Choose and configure Prisma or Drizzle.
+- [x] Choose and configure Prisma.
 - [x] Add user model and auth routes.
 - [x] Hash user passwords.
 - [x] Add note model and note routes.

@@ -6,6 +6,11 @@ import {
   hashToken,
   verifyPassword,
 } from '../utils/crypto';
+import {
+  parseDatabaseUtcTimestamp,
+  serializeDatabaseUtcTimestamp,
+  serializeNullableDatabaseUtcTimestamp,
+} from '../utils/dates';
 import { ERROR_CODES } from '../utils/errors';
 
 type ShareTypeOption = 'ONE_TIME' | 'TIME_BASED';
@@ -142,7 +147,7 @@ export async function resolveShareLink(
     return {
       passwordRequired: true,
       shareType: shareLink.shareType,
-      expiresAt: shareLink.expiresAt,
+      expiresAt: serializeDatabaseUtcTimestamp(shareLink.expiresAt),
     };
   }
 
@@ -251,7 +256,7 @@ export async function revokeShareLink(
     );
   }
 
-  return shareLink;
+  return serializeSafeShareLink(shareLink);
 }
 
 async function findShareLinkByTokenHash(
@@ -307,7 +312,7 @@ function assertShareLinkIsValid(
     );
   }
 
-  if (new Date(shareLink.expiresAt) < new Date()) {
+  if (parseDatabaseUtcTimestamp(shareLink.expiresAt) < new Date()) {
     throw new ShareServiceError(
       410,
       ERROR_CODES.EXPIRED_LINK,
@@ -330,7 +335,7 @@ function assertShareLinkIsNotRateLimited(shareLink: ShareLinkRow) {
   }
 
   const rateLimitStartedAt = Date.now() - RATE_LIMIT_WINDOW_MS;
-  const lastFailedAttemptAt = new Date(
+  const lastFailedAttemptAt = parseDatabaseUtcTimestamp(
     shareLink.lastFailedAttemptAt,
   ).getTime();
 
@@ -467,12 +472,23 @@ function toUnlockedShareResponse(shareLink: ShareLinkRow, viewCount: number) {
     note: {
       title: shareLink.noteTitle,
       content: shareLink.noteContent,
-      createdAt: shareLink.noteCreatedAt,
-      updatedAt: shareLink.noteUpdatedAt,
+      createdAt: serializeDatabaseUtcTimestamp(shareLink.noteCreatedAt),
+      updatedAt: serializeDatabaseUtcTimestamp(shareLink.noteUpdatedAt),
     },
     shareType: shareLink.shareType,
-    expiresAt: shareLink.expiresAt,
+    expiresAt: serializeDatabaseUtcTimestamp(shareLink.expiresAt),
     viewCount,
+  };
+}
+
+function serializeSafeShareLink(shareLink: SafeShareLinkRow): SafeShareLinkRow {
+  return {
+    ...shareLink,
+    expiresAt: serializeDatabaseUtcTimestamp(shareLink.expiresAt),
+    revokedAt: serializeNullableDatabaseUtcTimestamp(shareLink.revokedAt),
+    consumedAt: serializeNullableDatabaseUtcTimestamp(shareLink.consumedAt),
+    createdAt: serializeDatabaseUtcTimestamp(shareLink.createdAt),
+    updatedAt: serializeDatabaseUtcTimestamp(shareLink.updatedAt),
   };
 }
 

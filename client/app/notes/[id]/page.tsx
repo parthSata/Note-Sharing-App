@@ -7,13 +7,18 @@ import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import { useNotes, type Note } from "@/hooks/useNotes";
 import { useAuth } from "@/hooks/useAuth";
-import { normalizeShareUrlForClient } from "@/lib/utils";
+import { formatDate } from "@/lib/dateUtils";
+import { normalizeShareUrlForClient, parseApiDate } from "@/lib/utils";
 
 function getLinkStatus(link: Note["shareLinks"][0]) {
   if (link.revokedAt) return { label: "Revoked", color: "bg-red-100 text-red-600" };
   if (link.consumedAt) return { label: "Used", color: "bg-orange-100 text-orange-600" };
-  if (new Date(link.expiresAt) < new Date()) return { label: "Expired", color: "bg-slate-100 text-slate-600" };
+  if (parseApiDate(link.expiresAt) < new Date()) return { label: "Expired", color: "bg-slate-100 text-slate-600" };
   return { label: "Active", color: "bg-emerald-100 text-emerald-700" };
+}
+
+function canRevokeLink(link: Note["shareLinks"][0]) {
+  return !link.revokedAt && !link.consumedAt && parseApiDate(link.expiresAt) >= new Date();
 }
 
 export default function NoteDetailPage() {
@@ -110,7 +115,7 @@ export default function NoteDetailPage() {
 
         <div className="bg-white rounded-2xl border border-slate-100 p-6 mb-4">
           <h1 className="text-2xl font-bold text-slate-900 mb-3">{note.title}</h1>
-          <p className="text-slate-500 text-sm mb-4">{new Date(note.createdAt).toLocaleString()}</p>
+          <p className="text-slate-500 text-sm mb-4">{formatDate(note.createdAt)}</p>
           <div className="prose prose-slate max-w-none">
             <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{note.content}</p>
           </div>
@@ -136,7 +141,7 @@ export default function NoteDetailPage() {
               </div>
               <div className="bg-slate-50 rounded-xl p-3">
                 <div className="text-xs text-slate-500 mb-1">Expires At</div>
-                <div className="font-medium text-slate-800">{new Date(link.expiresAt).toLocaleString()}</div>
+                <div className="font-medium text-slate-800">{formatDate(link.expiresAt)}</div>
               </div>
               <div className="bg-slate-50 rounded-xl p-3">
                 <div className="text-xs text-slate-500 mb-1">View Count</div>
@@ -167,11 +172,15 @@ export default function NoteDetailPage() {
               )}
             </div>
 
-            {!link.revokedAt && (
+            {canRevokeLink(link) ? (
               <button onClick={() => setShowConfirm(true)}
                 className="w-full border-2 border-red-200 text-red-600 hover:bg-red-50 font-medium py-2.5 rounded-xl transition text-sm">
                 Revoke Share Link
               </button>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                This share link is no longer active, so it cannot be revoked.
+              </div>
             )}
           </div>
         )}

@@ -7,6 +7,8 @@ import Navbar from "@/components/Navbar";
 import { useNotes, type Note } from "@/hooks/useNotes";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/dateUtils";
+import { parseApiDate } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700",
@@ -18,7 +20,7 @@ const statusColors: Record<string, string> = {
 function getLinkStatus(link: Note["shareLinks"][0]): string {
   if (link.revokedAt) return "revoked";
   if (link.consumedAt) return "used";
-  if (new Date(link.expiresAt) < new Date()) return "expired";
+  if (parseApiDate(link.expiresAt) < new Date()) return "expired";
   return "active";
 }
 
@@ -89,7 +91,7 @@ export default function NotesPage() {
                   </div>
                   <p className="text-slate-500 text-sm line-clamp-2 mb-4">{note.content}</p>
                   <div className="flex items-center gap-3 mb-4 text-xs text-slate-400">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(note.createdAt).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(note.createdAt)}</span>
                     {link && <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{link.viewCount}</span>}
                     {link && <span className="flex items-center gap-1"><Link2 className="w-3 h-3" />{link.shareType === "ONE_TIME" ? "One-time" : "Time-based"}</span>}
                   </div>

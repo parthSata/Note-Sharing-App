@@ -19,7 +19,6 @@
     "@vercel/node": "^5.8.22",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.33.0",
     "hono": "^4.5.10",
     "jsonwebtoken": "^9.0.3",
     "nanoid": "^5.1.16",
@@ -27,7 +26,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.24.2",
     "typescript": "^5.5.4",
     "wrangler": "^3.78.12"
   }
