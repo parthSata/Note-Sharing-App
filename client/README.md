@@ -90,7 +90,7 @@ npm install
 
 ```bash
 cd backend
-npx wrangler dev
+npm run dev
 ```
 
 ### 3. Start the frontend
