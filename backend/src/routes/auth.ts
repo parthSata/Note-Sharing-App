@@ -152,11 +152,19 @@ async function readCredentials(c: Parameters<typeof handleAuthError>[0]) {
     );
   }
 
-  if (typeof password !== 'string' || password.length < 6) {
+  if (typeof password !== 'string' || password.length < 8) {
     throw new AuthRouteError(
       400,
       ERROR_CODES.VALIDATION_ERROR,
-      'Password must be at least 6 characters.',
+      'Password must be at least 8 characters.',
+    );
+  }
+
+  if (/\s/.test(password)) {
+    throw new AuthRouteError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      'Password cannot contain spaces.',
     );
   }
 

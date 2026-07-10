@@ -35,10 +35,12 @@ async function apiFetch<T>(
 }
 
 export const api = {
-  get: <T>(endpoint: string) => apiFetch<T>(endpoint, { method: 'GET' }),
+  get: <T>(endpoint: string, options: RequestInit = {}) =>
+    apiFetch<T>(endpoint, { ...options, method: 'GET' }),
 
-  post: <T>(endpoint: string, body?: unknown) =>
+  post: <T>(endpoint: string, body?: unknown, options: RequestInit = {}) =>
     apiFetch<T>(endpoint, {
+      ...options,
       method: 'POST',
       body: JSON.stringify(body),
     }),

@@ -24,6 +24,8 @@ export class AuthServiceError extends Error {
 export async function registerUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
 
+  validatePassword(password);
+
   const existingUser = await db.user.findUnique({
     where: { email: normalizedEmail },
     select: { id: true },
@@ -50,6 +52,8 @@ export async function registerUser(email: string, password: string) {
 
 export async function loginUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
+
+  validatePassword(password);
 
   const user = await db.user.findUnique({
     where: { email: normalizedEmail },
@@ -98,6 +102,24 @@ export async function loginUser(email: string, password: string) {
     token,
     user: publicUser,
   };
+}
+
+function validatePassword(password: string) {
+  if (password.length < 8) {
+    throw new AuthServiceError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      'Password must be at least 8 characters.',
+    );
+  }
+
+  if (/\s/.test(password)) {
+    throw new AuthServiceError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      'Password cannot contain spaces.',
+    );
+  }
 }
 
 export async function getUserById(userId: string) {

@@ -75,6 +75,11 @@ Connect frontend to real backend APIs.
 - [x] Next.js `client/` note pages now convert datetime-local input with `localInputToUTC` and display note dates through the local timezone formatter.
 - [x] Temporary timezone debug console logs added to note creation, notes list, and note detail pages, then removed after the timezone fix was verified.
 - [x] Backend UTC timestamp serializer now treats PostgreSQL `TIMESTAMP` Date objects as UTC wall-clock values to avoid IST double-offset display bugs.
+- [x] Next.js `client/` notes list now supports search, status filtering, share-type filtering, and 15-note infinite scroll for larger note sets.
+- [x] Share view count dedupe fixed by sending a stable browser view-session header from the Next.js share page API calls.
+- [x] Registration and login password validation now rejects whitespace and requires 8 characters on backend auth boundaries.
+- [x] One-time share page duplicate resolve calls are cached so a React dev-mode remount does not immediately consume the link twice and show already-used.
+- [x] Backend dev script runs the local Wrangler Worker server.
 
 ## Known Working Endpoints
 

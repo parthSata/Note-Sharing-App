@@ -6,6 +6,7 @@ import { useShare, type ShareState, type ShareNoteData } from "@/hooks/useShare"
 
 export default function ShareTokenPage() {
   const params = useParams();
+  const token = params.token as string;
   const { resolveToken, unlockWithPassword } = useShare();
   const [state, setState] = useState<ShareState>("loading");
   const [data, setData] = useState<ShareNoteData | undefined>();
@@ -14,16 +15,24 @@ export default function ShareTokenPage() {
   const [shake, setShake] = useState(false);
 
   useEffect(() => {
-    resolveToken(params.token as string).then(({ state: s, data: d }) => {
-      setState(s);
-      setData(d);
+    let isActive = true;
+
+    resolveToken(token).then(({ state: s, data: d }) => {
+      if (isActive) {
+        setState(s);
+        setData(d);
+      }
     });
-  }, []);
+
+    return () => {
+      isActive = false;
+    };
+  }, [resolveToken, token]);
 
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     setUnlocking(true);
-    const { state: s, data: d } = await unlockWithPassword(params.token as string, password);
+    const { state: s, data: d } = await unlockWithPassword(token, password);
     if (s === "wrong-password") { setShake(true); setTimeout(() => setShake(false), 500); }
     setState(s);
     setData(d);

@@ -20,6 +20,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     if (password !== confirm) { setError("Passwords do not match"); return; }
+    if (/\s/.test(password)) { setError("Password cannot contain spaces"); return; }
     if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
     setLoading(true);
     try {
